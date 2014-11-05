@@ -1,0 +1,32 @@
+{
+  "name": "express-route-versioning",
+  "version": "1.0.0",
+  "description": "Express middleware that re-routes requests based on HTTP header value",
+  "main": "./lib",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/peralmq/express-route-versioning"
+  },
+  "keywords": [
+    "express",
+    "route",
+    "router",
+    "version",
+    "versioning",
+    "accept"
+  ],
+  "author": "Pelle Almquist <per.almquist@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/peralmq/express-route-versioning/issues"
+  },
+  "homepage": "https://github.com/peralmq/express-route-versioning",
+  "devDependencies": {
+    "chai": "^1.9.2",
+    "mocha": "^2.0.1",
+    "should": "^4.1.0"
+  }
+}
