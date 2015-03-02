@@ -26,7 +26,9 @@
   "homepage": "https://github.com/peralmq/express-route-versioning",
   "devDependencies": {
     "chai": "^1.9.2",
+    "express": "^4.12.1",
     "mocha": "^2.0.1",
-    "should": "^4.1.0"
+    "should": "^4.1.0",
+    "supertest": "^0.15.0"
   }
 }

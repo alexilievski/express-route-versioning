@@ -1,47 +1,83 @@
 var chai = require('chai'),
-    version = require('./lib');
-
-var expect = chai.expect;
-
-function bar(req, res, next) { return 'bar'; }
-function baz(req, res, next) { return 'baz'; }
-function foo(req, res, next) { return 'foo'; }
+supertest = require('supertest'),
+version = require('./lib'),
+expect = chai.expect
+;
 
 describe('express-route-versioning', function() {
-
   it('should export Version constructor directly from package', function() {
     expect(version).to.be.an.object;
   });
 
-  describe('re-route', function() {
+  describe('express re-route', function() {
+    var express = require('express'),
+    one = express.Router(),
+    two = express.Router(),
+    three = express.Router(),
+    app = express()
+    ;
+
+    one.get('/example', function(req, res, next) { return res.send('one') ;});
+    two.get('/example', function(req, res, next) { return res.send('two') ;});
+
     version.use({
       'header': 'accept',
       'catcher': /vnd.mycompany.com\+json; version=(\d+)(,|$)/,
       'error': 406,
     });
-    var reroute = version.reroute({1: foo, 2: bar, 3: baz});
+    app.use(version.reroute({1: one, 2: two, 3: three}));
 
-    it('should match highest version', function() {
-      var req = {headers: {accept: 'vnd.mycompany.com+json; version=2'}};
-      expect(reroute(req, null, null)).to.equal('bar');
+    it('should match exact version', function(done) {
+      supertest(app)
+      .get('/example')
+      .set('accept', '/vnd.mycompany.com+json; version=1')
+      .expect(function(res) {
+        expect(res.text).to.equal('one');
+      })
+      .end(done);
     });
 
-    it('should return 406 (HTTP status code NOT ACCEPTABLE) if no version match', function() {
-      var req = {headers: {accept: 'vnd.mycompany.com+json; version=0'}};
-      var res = {status: function(code) { return {end: function() {return code;}};}};
-      expect(reroute(req, res, null)).to.equal(406);
+    it('should match highest version', function(done) {
+      supertest(app)
+      .get('/example')
+      .set('accept', '/vnd.mycompany.com+json; version=2')
+      .expect(function(res) {
+        expect(res.text).to.equal('two');
+      })
+      .end(done);
     });
 
-    it('should return 406 (HTTP status code NOT ACCEPTABLE) if missing version in header', function() {
-      var req = {headers: {accept: 'vnd.mycompany.com+json'}};
-      var res = {status: function(code) { return {end: function() {return code;}};}};
-      expect(reroute(req, res, null)).to.equal(406);
+    it('should expose older routes', function(done) {
+      supertest(app)
+      .get('/example')
+      .set('accept', '/vnd.mycompany.com+json; version=3')
+      .expect(function(res) {
+        expect(res.text).to.equal('two');
+      })
+      .end(done);
     });
 
-    it('should return 406 (HTTP status code NOT ACCEPTABLE) if missing header', function() {
-      var req = {headers: {}};
-      var res = {status: function(code) { return {end: function() {return code;}};}};
-      expect(reroute(req, res, null)).to.equal(406);
+    it('should return 406 (HTTP status code NOT ACCEPTABLE) if no version match', function(done) {
+      supertest(app)
+      .get('/example')
+      .set('accept', 'vnd.mycompany.com+json; version=0')
+      .expect(406)
+      .end(done);
+    });
+
+    it('should return 406 (HTTP status code NOT ACCEPTABLE) if missing version in header', function(done) {
+      supertest(app)
+      .get('/example')
+      .set('accept', 'vnd.mycompany.com+json')
+      .expect(406)
+      .end(done);
+    });
+
+    it('should return 406 (HTTP status code NOT ACCEPTABLE) if missing header', function(done) {
+      supertest(app)
+      .get('/example')
+      .expect(406)
+      .end(done);
     });
   });
 });
