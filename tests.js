@@ -18,6 +18,7 @@ describe('express-route-versioning', function() {
     ;
 
     one.get('/example', function(req, res, next) { return res.send('one') ;});
+    one.put('/example', function(req, res, next) { return res.send('one') ;});
     two.get('/example', function(req, res, next) { return res.send('two') ;});
 
     version.use({
@@ -43,6 +44,16 @@ describe('express-route-versioning', function() {
       .set('accept', '/vnd.mycompany.com+json; version=2')
       .expect(function(res) {
         expect(res.text).to.equal('two');
+      })
+      .end(done);
+    });
+
+    it('should match http verb', function(done) {
+      supertest(app)
+      .put('/example')
+      .set('accept', '/vnd.mycompany.com+json; version=2')
+      .expect(function(res) {
+        expect(res.text).to.equal('one');
       })
       .end(done);
     });
