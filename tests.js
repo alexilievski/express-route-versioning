@@ -13,8 +13,7 @@ describe('express-route-versioning', function() {
     var express = require('express'),
     one = express.Router(),
     two = express.Router(),
-    three = express.Router(),
-    app = express()
+    three = express.Router()
     ;
 
     one.all('/example', function(req, res, next) { return res.send('one') ;});
@@ -25,79 +24,104 @@ describe('express-route-versioning', function() {
       'catcher': /vnd.mycompany.com\+json; version=(\d+)(,|$)/,
       'error': 406,
     });
-    app.use(version.reroute({1: one, 2: two, 3: three}));
 
-    it('should match exact version', function(done) {
-      supertest(app)
-      .get('/example')
-      .set('accept', '/vnd.mycompany.com+json; version=1')
-      .expect(function(res) {
-        expect(res.text).to.equal('one');
-      })
-      .end(done);
+    describe('normal cases', function() {
+      var app = express();
+      app.use(version.reroute({1: one, 2: two, 3: three}));
+
+      it('should match exact version', function(done) {
+        supertest(app)
+        .get('/example')
+        .set('accept', '/vnd.mycompany.com+json; version=1')
+        .expect(function(res) {
+          expect(res.text).to.equal('one');
+        })
+        .end(done);
+      });
+
+      it('should match highest version', function(done) {
+        supertest(app)
+        .get('/example')
+        .set('accept', '/vnd.mycompany.com+json; version=2')
+        .expect(function(res) {
+          expect(res.text).to.equal('two');
+        })
+        .end(done);
+      });
+
+      it('should match http verb', function(done) {
+        supertest(app)
+        .put('/example')
+        .set('accept', '/vnd.mycompany.com+json; version=2')
+        .expect(function(res) {
+          expect(res.text).to.equal('one');
+        })
+        .end(done);
+      });
+
+      it('should handle all http verbs', function(done) {
+        supertest(app)
+        .post('/example')
+        .set('accept', '/vnd.mycompany.com+json; version=2')
+        .expect(function(res) {
+          expect(res.text).to.equal('one');
+        })
+        .end(done);
+      });
+
+      it('should expose older routes', function(done) {
+        supertest(app)
+        .get('/example')
+        .set('accept', '/vnd.mycompany.com+json; version=3')
+        .expect(function(res) {
+          expect(res.text).to.equal('two');
+        })
+        .end(done);
+      });
+
+      it('should return 406 (HTTP status code NOT ACCEPTABLE) if no version match', function(done) {
+        supertest(app)
+        .get('/example')
+        .set('accept', 'vnd.mycompany.com+json; version=0')
+        .expect(406)
+        .end(done);
+      });
+
+      it('should return 406 (HTTP status code NOT ACCEPTABLE) if missing version in header', function(done) {
+        supertest(app)
+        .get('/example')
+        .set('accept', 'vnd.mycompany.com+json')
+        .expect(406)
+        .end(done);
+      });
+
+      it('should return 406 (HTTP status code NOT ACCEPTABLE) if missing header', function(done) {
+        supertest(app)
+        .get('/example')
+        .expect(406)
+        .end(done);
+      });
     });
 
-    it('should match highest version', function(done) {
-      supertest(app)
-      .get('/example')
-      .set('accept', '/vnd.mycompany.com+json; version=2')
-      .expect(function(res) {
-        expect(res.text).to.equal('two');
-      })
-      .end(done);
-    });
+    describe('weird cases', function() {
+      var
+          four = express.Router(),
+          app = express()
+          ;
 
-    it('should match http verb', function(done) {
-      supertest(app)
-      .put('/example')
-      .set('accept', '/vnd.mycompany.com+json; version=2')
-      .expect(function(res) {
-        expect(res.text).to.equal('one');
-      })
-      .end(done);
-    });
+      four.get('/example', function(req, res, next) { return res.send('four') ;});
+      four.stack[0].route = undefined;
+      app.use(version.reroute({1: one, 2: two, 3: three, 4: four}));
 
-    it('should handle all http verbs', function(done) {
-      supertest(app)
-      .post('/example')
-      .set('accept', '/vnd.mycompany.com+json; version=2')
-      .expect(function(res) {
-        expect(res.text).to.equal('one');
-      })
-      .end(done);
-    });
-
-    it('should expose older routes', function(done) {
-      supertest(app)
-      .get('/example')
-      .set('accept', '/vnd.mycompany.com+json; version=3')
-      .expect(function(res) {
-        expect(res.text).to.equal('two');
-      })
-      .end(done);
-    });
-
-    it('should return 406 (HTTP status code NOT ACCEPTABLE) if no version match', function(done) {
-      supertest(app)
-      .get('/example')
-      .set('accept', 'vnd.mycompany.com+json; version=0')
-      .expect(406)
-      .end(done);
-    });
-
-    it('should return 406 (HTTP status code NOT ACCEPTABLE) if missing version in header', function(done) {
-      supertest(app)
-      .get('/example')
-      .set('accept', 'vnd.mycompany.com+json')
-      .expect(406)
-      .end(done);
-    });
-
-    it('should return 406 (HTTP status code NOT ACCEPTABLE) if missing header', function(done) {
-      supertest(app)
-      .get('/example')
-      .expect(406)
-      .end(done);
+      it('should handle layer with undefined route', function(done) {
+        supertest(app)
+        .get('/example')
+        .set('accept', '/vnd.mycompany.com+json; version=4')
+        .expect(function(res) {
+          expect(res.text).to.equal('two');
+        })
+        .end(done);
+      });
     });
   });
 });
