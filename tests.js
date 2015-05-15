@@ -13,11 +13,15 @@ describe('express-route-versioning', function() {
     var express = require('express'),
     one = express.Router(),
     two = express.Router(),
-    three = express.Router()
+    three = express.Router(),
+    sub_router = express.Router()
     ;
 
+    sub_router.get('/sub-route', function(req, res, next) { return res.send('sub-route') ;});
     one.all('/example', function(req, res, next) { return res.send('one') ;});
     two.get('/example', function(req, res, next) { return res.send('two') ;});
+
+    two.use('/base-route', sub_router);
 
     version.use({
       'header': 'accept',
@@ -79,6 +83,17 @@ describe('express-route-versioning', function() {
         .end(done);
       });
 
+      it('should work with sub routers', function(done) {
+        supertest(app)
+        .get('/base-route/sub-route')
+        .set('accept', '/vnd.mycompany.com+json; version=2')
+        .expect(200)
+        .expect(function(res) {
+          expect(res.text).to.equal('sub-route');
+        })
+        .end(done);
+      });
+
       it('should return 406 (HTTP status code NOT ACCEPTABLE) if no version match', function(done) {
         supertest(app)
         .get('/example')
@@ -99,6 +114,14 @@ describe('express-route-versioning', function() {
         supertest(app)
         .get('/example')
         .expect(406)
+        .end(done);
+      });
+
+      it('should return 404 (HTTP status code NOT FOUND) if a route is not defined in any version', function(done) {
+        supertest(app)
+        .get('/anyRouteThatDoesntExist')
+        .set('accept', 'vnd.mycompany.com+json; version=1')
+        .expect(404)
         .end(done);
       });
     });
