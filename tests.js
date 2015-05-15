@@ -116,6 +116,14 @@ describe('express-route-versioning', function() {
         .expect(406)
         .end(done);
       });
+
+      it('should return 404 (HTTP status code NOT FOUND) if a route is not defined in any version', function(done) {
+        supertest(app)
+          .get('/anyRouteThatDoesntExist')
+          .set('accept', 'vnd.mycompany.com+json; version=1')
+          .expect(404)
+          .end(done);
+      });
     });
 
     describe('weird cases', function() {
