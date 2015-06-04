@@ -12,19 +12,18 @@ Customize the HTTP status code for a failed re-routing using the `error`, i.e. `
 Re-route based on version in HTTP header `Accept: vnd.mycompany.com+json; version=1`.
 ```javascript
 var express = require('express');
-    version = require('express-version-reroute');
+    version = require('express-route-versioning');
 version.use({
     'header': 'accept',
     'grab': /vnd.mycompany.com\+json; version=(\d+)(,|$)/,
     'error': 406,
 });
-var router = express.Router()
-  .all('/ping',
-       version.reroute({
-         1: function(req, res, next) { res.json('pong'); },
-         2: function(req, res, next) { res.status(200).end(); },
-       })
-   );
+var v1 = express.Router().get('/ping', function(req, res, next) { res.json('pong'); }),
+    v2 = express.Router().get('/ping', function(req, res, next) { res.status(200).end(); }),
+    router = express.Router().use(version.reroute({
+      1: v1,
+      2: v2,
+    }));
 express().use(router).listen(5000, function() {});
 ```
 [cURL](http://curl.haxx.se/) examples that give different behavior based on version.
